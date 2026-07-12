@@ -58,7 +58,7 @@ I dati grezzi di tutto quanto sopra sono in questo repository (`observatory_2026
 
    ```
    python hello_local.py          # solo simulatore, zero quota
-   python hello_qpu.py            # primo contatto con l'hardware, ~5 s di quota
+   python hello_qpu.py            # primo contatto con l'hardware, ~15 s di quota
    python experiments.py          # la batteria del Report 001, ~8 s di quota
    python observatory.py 2026-07  # la batteria mensile completa su 3 QPU
    ```

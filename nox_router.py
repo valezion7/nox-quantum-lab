@@ -295,15 +295,22 @@ def ollama_models(timeout: float = 3.0) -> list:
 
 
 def run_ollama(model: str, prompt: str, max_out: int) -> dict:
-    body = json.dumps({
-        "model": model, "prompt": prompt, "stream": False, "think": False,
-        "options": {"num_predict": max_out},
-    }).encode()
-    req = urllib.request.Request(CONFIG["ollama_url"] + "/api/generate", data=body,
-                                 headers={"Content-Type": "application/json"})
+    def call(payload: dict) -> dict:
+        req = urllib.request.Request(CONFIG["ollama_url"] + "/api/generate",
+                                     data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=600) as r:
+            return json.loads(r.read())
+
+    base = {"model": model, "prompt": prompt, "stream": False,
+            "options": {"num_predict": max_out}}
     t0 = time.perf_counter()
-    with urllib.request.urlopen(req, timeout=600) as r:
-        out = json.loads(r.read())
+    try:
+        # think=False evita il ragionamento esteso sui modelli che lo supportano
+        out = call({**base, "think": False})
+    except Exception:
+        # alcuni modelli rifiutano il parametro think: riprova senza
+        out = call(base)
     wall = time.perf_counter() - t0
     n_out = out.get("eval_count", 0)
     return {"text": out.get("response", ""), "output_tokens": n_out,
@@ -387,10 +394,16 @@ def task_llm(args, receipt):
                 receipt["outcome"] = "SDK anthropic non installato: pip install anthropic"
                 print("Manca l'SDK: pip install anthropic")
                 return
-            client = anthropic.Anthropic()  # legge ANTHROPIC_API_KEY dall'ambiente
-            t0 = time.perf_counter()
-            resp = client.messages.create(model=pick["name"], max_tokens=tok_out,
-                                          messages=[{"role": "user", "content": prompt}])
+            try:
+                client = anthropic.Anthropic()  # legge ANTHROPIC_API_KEY dall'ambiente
+                t0 = time.perf_counter()
+                resp = client.messages.create(model=pick["name"], max_tokens=tok_out,
+                                              messages=[{"role": "user", "content": prompt}])
+            except Exception as e:
+                receipt["executed"] = None
+                receipt["outcome"] = f"esecuzione cloud fallita: {e}"
+                print(f"Chiamata cloud fallita (API key mancante o errore API): {e}")
+                return
             wall = time.perf_counter() - t0
             text = "".join(b.text for b in resp.content if b.type == "text")
             usage = resp.usage

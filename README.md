@@ -58,7 +58,7 @@ Raw data for all of the above is in this repository (`observatory_2026-07.json`,
 
    ```
    python hello_local.py          # simulator only, zero quota
-   python hello_qpu.py            # first contact with real hardware, ~5 s of quota
+   python hello_qpu.py            # first contact with real hardware, ~15 s of quota
    python experiments.py          # the Report 001 battery, ~8 s of quota
    python observatory.py 2026-07  # the full monthly battery on 3 QPUs
    ```
