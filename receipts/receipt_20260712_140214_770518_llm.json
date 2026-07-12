@@ -1,0 +1,48 @@
+{
+  "router": "nox-router-v0.2",
+  "task": "llm",
+  "params": {
+    "objective": "private",
+    "max_out": 60,
+    "allow_cloud": false
+  },
+  "started": "2026-07-12T12:02:09.971504+00:00",
+  "prompt_chars": 39,
+  "candidates": [
+    {
+      "backend": "local:qwen3.6:35b",
+      "can_answer": true,
+      "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')",
+      "note": "il prompt non lascia mai questa macchina"
+    },
+    {
+      "backend": "cloud:claude-opus-4-8",
+      "can_answer": true,
+      "est": "~$0.0015 stimati (9 tok in + 60 tok out, listino 2026-06)",
+      "note": "tier top; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-sonnet-5",
+      "can_answer": true,
+      "est": "~$0.0009 stimati (9 tok in + 60 tok out, listino 2026-06)",
+      "note": "tier mid; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-haiku-4-5",
+      "can_answer": true,
+      "est": "~$0.0003 stimati (9 tok in + 60 tok out, listino 2026-06)",
+      "note": "tier small; il prompt viene inviato a anthropic"
+    }
+  ],
+  "token_estimate_note": "stima grezza ~4 char/token, serve solo a ordinare i costi tra candidati",
+  "chosen": "local:qwen3.6:35b",
+  "reason": "il prompt non deve lasciare la macchina: locale obbligato.",
+  "executed": {
+    "backend": "local:qwen3.6:35b",
+    "output_tokens": 60,
+    "wall_s": 2.77,
+    "tokens_per_s": 21.6,
+    "preview": "Ecco un esempio di come si possono riassumere i **dati personali riservati**, mantenendo la riservatezza e la protezione delle informazioni sensibili:\n\n---\n\n**Dati Personali Riservati:**\n\n- Nome: [Nom"
+  },
+  "total_wall_ms": 4798.3
+}

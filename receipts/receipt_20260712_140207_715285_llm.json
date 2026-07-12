@@ -1,0 +1,48 @@
+{
+  "router": "nox-router-v0.2",
+  "task": "llm",
+  "params": {
+    "objective": "draft",
+    "max_out": 80,
+    "allow_cloud": false
+  },
+  "started": "2026-07-12T12:01:48.877006+00:00",
+  "prompt_chars": 62,
+  "candidates": [
+    {
+      "backend": "local:qwen3.6:35b",
+      "can_answer": true,
+      "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')",
+      "note": "il prompt non lascia mai questa macchina"
+    },
+    {
+      "backend": "cloud:claude-opus-4-8",
+      "can_answer": true,
+      "est": "~$0.0021 stimati (15 tok in + 80 tok out, listino 2026-06)",
+      "note": "tier top; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-sonnet-5",
+      "can_answer": true,
+      "est": "~$0.0012 stimati (15 tok in + 80 tok out, listino 2026-06)",
+      "note": "tier mid; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-haiku-4-5",
+      "can_answer": true,
+      "est": "~$0.0004 stimati (15 tok in + 80 tok out, listino 2026-06)",
+      "note": "tier small; il prompt viene inviato a anthropic"
+    }
+  ],
+  "token_estimate_note": "stima grezza ~4 char/token, serve solo a ordinare i costi tra candidati",
+  "chosen": "local:qwen3.6:35b",
+  "reason": "per una bozza il modello locale basta e il costo marginale e' ~0: il cloud qui sarebbe spesa inutile.",
+  "executed": {
+    "backend": "local:qwen3.6:35b",
+    "output_tokens": 57,
+    "wall_s": 16.74,
+    "tokens_per_s": 3.4,
+    "preview": "L'entanglement è come se avessi due superpoteri magici: quando uno dei tuoi amici lontani fa qualcosa, tu lo sai e fai la cosa giusta esattamente nello stesso istante, come se foste connessi da un inv"
+  },
+  "total_wall_ms": 18837.4
+}

@@ -1,0 +1,43 @@
+{
+  "router": "nox-router-v0.2",
+  "task": "llm",
+  "params": {
+    "objective": "quality",
+    "max_out": 512,
+    "allow_cloud": false
+  },
+  "started": "2026-07-12T12:02:07.815748+00:00",
+  "prompt_chars": 67,
+  "candidates": [
+    {
+      "backend": "local:qwen3.6:35b",
+      "can_answer": true,
+      "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')",
+      "note": "il prompt non lascia mai questa macchina"
+    },
+    {
+      "backend": "cloud:claude-opus-4-8",
+      "can_answer": true,
+      "est": "~$0.0129 stimati (16 tok in + 512 tok out, listino 2026-06)",
+      "note": "tier top; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-sonnet-5",
+      "can_answer": true,
+      "est": "~$0.0077 stimati (16 tok in + 512 tok out, listino 2026-06)",
+      "note": "tier mid; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-haiku-4-5",
+      "can_answer": true,
+      "est": "~$0.0026 stimati (16 tok in + 512 tok out, listino 2026-06)",
+      "note": "tier small; il prompt viene inviato a anthropic"
+    }
+  ],
+  "token_estimate_note": "stima grezza ~4 char/token, serve solo a ordinare i costi tra candidati",
+  "chosen": "cloud:claude-opus-4-8",
+  "reason": "serve la massima qualita': il modello cloud di fascia alta e' la scelta giusta, con il costo stimato sullo scontrino.",
+  "executed": null,
+  "outcome": "deciso ma non eseguito: rilancia con --allow-cloud per spendere sull'API",
+  "total_wall_ms": 2054.0
+}

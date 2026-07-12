@@ -1,0 +1,11 @@
+{
+  "note": "Listini cloud per milione di token (input/output), aggiornati alla data indicata. I prezzi cambiano: verificare i listini correnti del provider prima di decisioni di budget.",
+  "pricing_date": "2026-06",
+  "cloud_models": [
+    { "name": "claude-opus-4-8", "provider": "anthropic", "price_in_usd_mtok": 5.0, "price_out_usd_mtok": 25.0, "tier": "top" },
+    { "name": "claude-sonnet-5", "provider": "anthropic", "price_in_usd_mtok": 3.0, "price_out_usd_mtok": 15.0, "tier": "mid" },
+    { "name": "claude-haiku-4-5", "provider": "anthropic", "price_in_usd_mtok": 1.0, "price_out_usd_mtok": 5.0, "tier": "small" }
+  ],
+  "ollama_url": "http://localhost:11434",
+  "local_preference": ["qwen3.6:35b", "gemma4:31b", "qwen3.5:35b", "gemma3:27b"]
+}

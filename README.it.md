@@ -34,7 +34,8 @@ I dati grezzi di tutto quanto sopra sono in questo repository (`observatory_2026
 | `fetch_partial.py` | Ricostruisce un JSON dell'osservatorio dai job già completati, saltando quelli ancora in coda. |
 | `retrieve_job.py` | Recupera stato e risultati di qualsiasi job per ID. Funziona sia con job Estimator sia Sampler. |
 | `quantum_agent.py` | Esperimento 004: un LLM locale (Qwen2.5-Coder-14B-Qiskit via Ollama) scrive un circuito da una frase in linguaggio naturale, una sandbox di esecuzione e un giudice semantico lo validano sul simulatore, e solo i circuiti approvati possono raggiungere la QPU reale. |
-| `nox_router.py` | NOX Router v0: dato un task, decide tra CPU classica, simulatore locale e QPU reale, spiega la scelta e scrive uno scontrino. Vedi sotto. |
+| `nox_router.py` | NOX Router: dato un task, decide tra CPU classica, simulatore locale, QPU reale e, per la generazione di testo, LLM locale contro API cloud; spiega la scelta e scrive uno scontrino. Vedi sotto. |
+| `router_config.json` | Il listino del router: tariffe dei modelli cloud (datate; aggiornale quando cambiano) e ordine di preferenza dei modelli locali. |
 | `qrng_submit.py` / `qrng_fetch.py` | Bit casuali quantistici: 8 qubit in superposizione misurati 4.096 volte, poi ripuliti con l'estrattore di von Neumann. Alimentano la pagina delle monete sul sito. |
 | `make_charts_dark.py` | Genera i grafici in tema scuro usati nel report PDF. |
 
@@ -99,7 +100,25 @@ python nox_router.py qrng --bits 128          # entropia del sistema operativo, 
 python nox_router.py qrng --bits 128 --objective quantum --allow-qpu
 ```
 
-Ogni invocazione scrive uno scontrino JSON in `receipts/`: i candidati considerati, le stime di costo, la scelta, il motivo e cosa è stato eseguito davvero. La QPU non viene mai toccata senza un `--allow-qpu` esplicito. Nel repository ci sono scontrini di esempio da esecuzioni reali.
+Dalla v0.2 lo stesso pattern copre i modelli di linguaggio. Il router scopre cosa gira sull'istanza Ollama locale, stima i costi cloud dal listino datato in `router_config.json` e applica l'obiettivo che dichiari:
+
+```
+python nox_router.py llm "Riassumi in tre righe: ..." --objective draft
+# -> esegue sul modello locale della GPU (costo marginale ~0) e ti dice
+#    perché pagare un'API cloud qui sarebbe denaro sprecato
+
+python nox_router.py llm "..." --objective quality --allow-cloud
+# -> sceglie il modello cloud di fascia alta con il costo stimato sullo
+#    scontrino; senza --allow-cloud decide ma si rifiuta di spendere
+
+python nox_router.py llm "testo riservato ..." --objective private
+# -> solo locale; se nessun modello locale è disponibile si ferma invece
+#    di mandare il prompt a terzi
+```
+
+L'esecuzione cloud usa l'SDK ufficiale `anthropic` (dipendenza opzionale: `pip install anthropic`, con `ANTHROPIC_API_KEY` nell'ambiente) e riporta sullo scontrino i conteggi token e il costo reali dalla risposta dell'API, non solo la stima. Le stime token per la fase di decisione usano un'euristica volutamente grezza (~4 caratteri per token), dichiarata come tale sullo scontrino.
+
+Ogni invocazione scrive uno scontrino JSON in `receipts/`: i candidati considerati, le stime di costo, la scelta, il motivo e cosa è stato eseguito davvero. Le risorse a pagamento non vengono mai toccate senza un flag esplicito: `--allow-qpu` per la quota IBM Quantum, `--allow-cloud` per le API a pagamento. Nel repository ci sono scontrini di esempio da esecuzioni reali.
 
 ## Limiti, detti chiaramente
 

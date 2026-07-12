@@ -1,17 +1,19 @@
 """NOX Router v0: dato un task, sceglie il backend giusto e lascia lo scontrino.
 
 L'idea di NOX in una frase: un agente non deve soltanto eseguire, deve sapere
-DOVE, QUANDO e SE conviene eseguire. Questo router v0 la applica ai backend
-del laboratorio (CPU classica, simulatore Aer, QPU IBM reale) su tre task:
+DOVE, QUANDO e SE conviene eseguire. Questo router la applica ai backend del
+laboratorio (CPU classica, simulatore Aer, QPU IBM reale) e, dalla v0.2,
+anche ai modelli di linguaggio (LLM locale su GPU contro API cloud):
 
   search   trovare una stringa marcata tra 2^n possibilita' (il problema di Grover)
   bell     il test CHSH: riprodurre le statistiche oppure certificarle su hardware
   qrng     generare bit casuali
+  llm      generare testo: modello locale (Ollama) o API cloud, con stima dei costi
 
 Per ogni richiesta il router valuta i candidati, spiega la scelta ed esegue
 solo quando ha senso. Tutto finisce in uno scontrino JSON in receipts/.
-La QPU reale non viene mai toccata senza --allow-qpu: la quota e' preziosa
-e la coda e' lunga, quindi il default e' decidere senza spendere.
+Le risorse che costano non vengono mai toccate senza un flag esplicito:
+--allow-qpu per la quota IBM Quantum, --allow-cloud per le API a pagamento.
 
 Esempi:
   python nox_router.py search --space 8 --target 101
@@ -20,8 +22,10 @@ Esempi:
   python nox_router.py bell --objective certify --allow-qpu
   python nox_router.py qrng --bits 128
   python nox_router.py qrng --bits 128 --objective quantum --allow-qpu
+  python nox_router.py llm "Riassumi in tre righe: ..." --objective draft
+  python nox_router.py llm "..." --objective quality --allow-cloud
 
-Nota onesta, da tenere a mente leggendo gli scontrini: su questi problemi
+Nota onesta, da tenere a mente leggendo gli scontrini: sui problemi
 giocattolo il classico vince sempre in velocita'. Il valore della QPU oggi
 non e' la velocita', e' cio' che il classico non puo' produrre per principio:
 correlazioni di Bell certificate dall'hardware e casualita' non deterministica.
@@ -31,11 +35,13 @@ import json
 import math
 import os
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
 RECEIPTS = HERE / "receipts"
+CONFIG = json.loads((HERE / "router_config.json").read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------- circuiti
@@ -276,6 +282,142 @@ def task_qrng(args, receipt):
     print(f"QPU: job {receipt['executed']['job_id']} su {receipt['executed']['backend']}")
 
 
+# ---------------------------------------------------------------- llm
+
+def ollama_models(timeout: float = 3.0) -> list:
+    """Modelli disponibili sull'istanza Ollama locale ([] se non raggiungibile)."""
+    try:
+        with urllib.request.urlopen(CONFIG["ollama_url"] + "/api/tags", timeout=timeout) as r:
+            tags = json.loads(r.read())
+        return [m["name"] for m in tags.get("models", [])]
+    except Exception:
+        return []
+
+
+def run_ollama(model: str, prompt: str, max_out: int) -> dict:
+    body = json.dumps({
+        "model": model, "prompt": prompt, "stream": False, "think": False,
+        "options": {"num_predict": max_out},
+    }).encode()
+    req = urllib.request.Request(CONFIG["ollama_url"] + "/api/generate", data=body,
+                                 headers={"Content-Type": "application/json"})
+    t0 = time.perf_counter()
+    with urllib.request.urlopen(req, timeout=600) as r:
+        out = json.loads(r.read())
+    wall = time.perf_counter() - t0
+    n_out = out.get("eval_count", 0)
+    return {"text": out.get("response", ""), "output_tokens": n_out,
+            "wall_s": round(wall, 2),
+            "tokens_per_s": round(n_out / wall, 1) if wall > 0 else None}
+
+
+def est_tokens(text: str) -> int:
+    """Stima grezza (~4 caratteri per token). Per conteggi precisi usare
+    l'endpoint count_tokens del provider; qui serve solo a ordinare i costi."""
+    return max(1, len(text) // 4)
+
+
+def task_llm(args, receipt):
+    prompt = args.prompt
+    tok_in = est_tokens(prompt)
+    tok_out = args.max_out
+    local = ollama_models()
+    local_pick = next((m for m in CONFIG["local_preference"] if m in local), None)
+
+    candidates = []
+    if local_pick:
+        candidates.append({
+            "backend": f"local:{local_pick}", "can_answer": True,
+            "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')",
+            "note": "il prompt non lascia mai questa macchina",
+        })
+    else:
+        candidates.append({
+            "backend": "local", "can_answer": False,
+            "est": "n/a", "note": "Ollama non raggiungibile o nessun modello della lista di preferenza",
+        })
+    for m in CONFIG["cloud_models"]:
+        cost = tok_in / 1e6 * m["price_in_usd_mtok"] + tok_out / 1e6 * m["price_out_usd_mtok"]
+        candidates.append({
+            "backend": f"cloud:{m['name']}", "can_answer": True,
+            "est": f"~${cost:.4f} stimati ({tok_in} tok in + {tok_out} tok out, "
+                   f"listino {CONFIG['pricing_date']})",
+            "note": f"tier {m['tier']}; il prompt viene inviato a {m['provider']}",
+        })
+    receipt["candidates"] = candidates
+    receipt["token_estimate_note"] = ("stima grezza ~4 char/token, serve solo a "
+                                      "ordinare i costi tra candidati")
+
+    if args.objective == "private":
+        if not local_pick:
+            receipt["chosen"] = None
+            receipt["reason"] = ("richiesta privacy: solo un modello locale puo' "
+                                 "rispondere, ma Ollama non e' disponibile. Il "
+                                 "router si ferma invece di mandare il prompt nel cloud.")
+            receipt["executed"] = None
+            print("BLOCCATO: obiettivo private ma nessun modello locale disponibile.")
+            return
+        receipt["chosen"] = f"local:{local_pick}"
+        receipt["reason"] = "il prompt non deve lasciare la macchina: locale obbligato."
+    elif args.objective == "draft" and local_pick:
+        receipt["chosen"] = f"local:{local_pick}"
+        receipt["reason"] = ("per una bozza il modello locale basta e il costo "
+                             "marginale e' ~0: il cloud qui sarebbe spesa inutile.")
+    else:
+        # quality, oppure draft senza un modello locale disponibile
+        pick = min((m for m in CONFIG["cloud_models"] if m["tier"] == "top"),
+                   key=lambda m: m["price_out_usd_mtok"], default=CONFIG["cloud_models"][0]) \
+            if args.objective == "quality" else \
+            min(CONFIG["cloud_models"], key=lambda m: m["price_out_usd_mtok"])
+        receipt["chosen"] = f"cloud:{pick['name']}"
+        receipt["reason"] = ("serve la massima qualita': il modello cloud di fascia "
+                             "alta e' la scelta giusta, con il costo stimato sullo scontrino."
+                             if args.objective == "quality" else
+                             "nessun modello locale disponibile: il cloud piu' economico fa da riserva.")
+        if not args.allow_cloud:
+            receipt["executed"] = None
+            receipt["outcome"] = "deciso ma non eseguito: rilancia con --allow-cloud per spendere sull'API"
+            print("Decisione presa (cloud). Per eseguire davvero: aggiungi --allow-cloud")
+            return
+        if pick["provider"] == "anthropic":
+            try:
+                import anthropic  # dipendenza opzionale: pip install anthropic
+            except ImportError:
+                receipt["executed"] = None
+                receipt["outcome"] = "SDK anthropic non installato: pip install anthropic"
+                print("Manca l'SDK: pip install anthropic")
+                return
+            client = anthropic.Anthropic()  # legge ANTHROPIC_API_KEY dall'ambiente
+            t0 = time.perf_counter()
+            resp = client.messages.create(model=pick["name"], max_tokens=tok_out,
+                                          messages=[{"role": "user", "content": prompt}])
+            wall = time.perf_counter() - t0
+            text = "".join(b.text for b in resp.content if b.type == "text")
+            usage = resp.usage
+            cost = (usage.input_tokens / 1e6 * pick["price_in_usd_mtok"]
+                    + usage.output_tokens / 1e6 * pick["price_out_usd_mtok"])
+            receipt["executed"] = {"backend": f"cloud:{pick['name']}",
+                                   "input_tokens": usage.input_tokens,
+                                   "output_tokens": usage.output_tokens,
+                                   "cost_usd": round(cost, 5),
+                                   "wall_s": round(wall, 2),
+                                   "preview": text[:200]}
+            print(f"CLOUD {pick['name']}: {usage.output_tokens} token in {wall:.1f}s, "
+                  f"~${cost:.4f}\n---\n{text[:400]}")
+        else:
+            receipt["executed"] = None
+            receipt["outcome"] = f"provider {pick['provider']} non implementato in v0"
+            print(f"Provider {pick['provider']} non implementato.")
+        return
+
+    # esecuzione locale
+    res = run_ollama(local_pick, prompt, tok_out)
+    receipt["executed"] = {"backend": f"local:{local_pick}", **{k: v for k, v in res.items() if k != "text"},
+                           "preview": res["text"][:200]}
+    print(f"LOCALE {local_pick}: {res['output_tokens']} token in {res['wall_s']}s "
+          f"({res['tokens_per_s']} tok/s), costo marginale ~0\n---\n{res['text'][:400]}")
+
+
 # ---------------------------------------------------------------- main
 
 def main():
@@ -297,21 +439,30 @@ def main():
     pq.add_argument("--objective", choices=["any", "quantum"], default="any")
     pq.add_argument("--allow-qpu", action="store_true")
 
+    pl = sub.add_parser("llm", help="generazione testo: LLM locale o API cloud")
+    pl.add_argument("prompt", help="il prompt da eseguire")
+    pl.add_argument("--objective", choices=["draft", "quality", "private"], default="draft")
+    pl.add_argument("--max-out", type=int, default=512, help="token di output previsti")
+    pl.add_argument("--allow-cloud", action="store_true")
+
     args = p.parse_args()
 
-    receipt = {"router": "nox-router-v0", "task": args.task,
-               "params": {k: v for k, v in vars(args).items() if k != "task"},
+    receipt = {"router": "nox-router-v0.2", "task": args.task,
+               "params": {k: v for k, v in vars(args).items() if k not in ("task", "prompt")},
                "started": datetime.now(timezone.utc).isoformat()}
+    if args.task == "llm":
+        receipt["prompt_chars"] = len(args.prompt)
     t0 = time.perf_counter()
 
-    {"search": task_search, "bell": task_bell, "qrng": task_qrng}[args.task](args, receipt)
+    {"search": task_search, "bell": task_bell, "qrng": task_qrng,
+     "llm": task_llm}[args.task](args, receipt)
 
     receipt["total_wall_ms"] = round((time.perf_counter() - t0) * 1000, 1)
     RECEIPTS.mkdir(exist_ok=True)
     out = RECEIPTS / f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{args.task}.json"
     out.write_text(json.dumps(receipt, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nScontrino: {out.relative_to(HERE)}")
-    print(f"Scelto: {receipt['chosen']}. {receipt['reason']}")
+    print(f"Scelto: {receipt.get('chosen') or 'nessun backend'}. {receipt.get('reason', '')}")
 
 
 if __name__ == "__main__":
