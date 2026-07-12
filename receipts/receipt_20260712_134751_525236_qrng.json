@@ -1,0 +1,35 @@
+{
+  "router": "nox-router-v0",
+  "task": "qrng",
+  "params": {
+    "bits": 64,
+    "objective": "quantum",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T11:47:51.525236+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": false,
+      "est": "os.urandom, istantaneo",
+      "note": "CSPRNG del sistema operativo: eccellente in pratica, deterministico per costruzione"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": false,
+      "est": "n/a",
+      "note": "un simulatore usa a sua volta un PRNG classico: quantistico solo di nome"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "~2 s di quota + coda",
+      "note": "misure di qubit in superposizione: esiti non deterministici per fisica"
+    }
+  ],
+  "chosen": "qpu",
+  "reason": "la richiesta e' casualita' quantistica autentica: solo la misura di qubit reali la fornisce (vedi qrng_submit.py / qrng_fetch.py per il flusso completo con estrattore di von Neumann).",
+  "executed": null,
+  "outcome": "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale",
+  "total_wall_ms": 0.0
+}

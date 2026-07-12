@@ -1,0 +1,39 @@
+{
+  "router": "nox-router-v0",
+  "task": "qrng",
+  "params": {
+    "bits": 128,
+    "objective": "any",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T11:47:51.457236+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": true,
+      "est": "os.urandom, istantaneo",
+      "note": "CSPRNG del sistema operativo: eccellente in pratica, deterministico per costruzione"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": false,
+      "est": "n/a",
+      "note": "un simulatore usa a sua volta un PRNG classico: quantistico solo di nome"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "~2 s di quota + coda",
+      "note": "misure di qubit in superposizione: esiti non deterministici per fisica"
+    }
+  ],
+  "chosen": "classical",
+  "reason": "servono bit casuali generici: il CSPRNG del sistema operativo e' la scelta giusta e gratuita. La QPU serve solo se la richiesta e' proprio la casualita' quantistica.",
+  "executed": {
+    "backend": "classical",
+    "bits": 128,
+    "sample": "0011101110111011110000010001100101000100000101000000001111110111",
+    "quantum": false
+  },
+  "total_wall_ms": 0.0
+}

@@ -1,0 +1,28 @@
+{
+  "task": "Create a 3-qubit W state and measure all qubits",
+  "model": "hf.co/Qiskit/Qwen2.5-Coder-14B-Qiskit-GGUF",
+  "started": "2026-07-12T01:07:37.892242",
+  "rounds": [
+    {
+      "n": 1,
+      "ok": true,
+      "gen_seconds": 2.645552635192871,
+      "code": "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(3)\nqc.h(0)\nqc.cx(0, 1)\nqc.cx(0, 2)\nqc.measure_all()"
+    }
+  ],
+  "simulator_counts_top": [
+    [
+      "000",
+      513
+    ],
+    [
+      "111",
+      511
+    ]
+  ],
+  "qpu": {
+    "backend": "ibm_fez",
+    "job_id": "d99cph2f47jc73a8u3r0"
+  },
+  "outcome": "ok"
+}

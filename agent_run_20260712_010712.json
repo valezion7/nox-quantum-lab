@@ -1,0 +1,24 @@
+{
+  "task": "Create a 5-qubit GHZ state and measure all qubits",
+  "model": "hf.co/Qiskit/Qwen2.5-Coder-14B-Qiskit-GGUF",
+  "started": "2026-07-12T01:07:04.923432",
+  "rounds": [
+    {
+      "n": 1,
+      "ok": true,
+      "gen_seconds": 6.755751132965088,
+      "code": "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(5)\nqc.h(0)\nfor i in range(4):\n    qc.cx(i, i+1)\nqc.measure_all()"
+    }
+  ],
+  "simulator_counts_top": [
+    [
+      "11111",
+      522
+    ],
+    [
+      "00000",
+      502
+    ]
+  ],
+  "outcome": "ok"
+}

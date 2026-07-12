@@ -1,0 +1,38 @@
+{
+  "router": "nox-router-v0",
+  "task": "bell",
+  "params": {
+    "objective": "simulate",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T11:47:50.249236+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": false,
+      "est": "n/a",
+      "note": "nessun sistema classico locale produce S > 2: non c'e' niente da eseguire"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": true,
+      "est": "4 circuiti su Aer, ~secondi",
+      "note": "riproduce le statistiche quantistiche ma gira su un computer classico: non certifica nulla sulla natura"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "4 circuiti, ~5-8 s di quota + coda",
+      "note": "l'unico backend che risponde alla domanda fisica"
+    }
+  ],
+  "chosen": "simulator",
+  "reason": "l'obiettivo e' riprodurre le statistiche attese: il simulatore basta e costa zero.",
+  "executed": {
+    "backend": "simulator",
+    "S": 2.7993,
+    "shots_per_setting": 4096,
+    "caveat": "valore simulato: non e' una prova sperimentale"
+  },
+  "total_wall_ms": 1062.5
+}

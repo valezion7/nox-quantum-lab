@@ -1,0 +1,41 @@
+{
+  "router": "nox-router-v0",
+  "task": "search",
+  "params": {
+    "space": 8,
+    "target": "101",
+    "objective": "hardware-proof",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T11:47:49.062237+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": true,
+      "est": "8 confronti, microsecondi, costo zero",
+      "note": "per qualunque spazio enumerabile in memoria e' imbattibile"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": true,
+      "est": "Grover a 3 qubit su Aer, ~secondi",
+      "note": "utile solo per validare il circuito, non per la risposta"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "Grover a 3 qubit, ~secondi di quota + coda",
+      "note": "dimostra l'algoritmo su hardware; nessun vantaggio di velocita' a questa scala"
+    }
+  ],
+  "chosen": "qpu",
+  "reason": "l'obiettivo e' dimostrare l'algoritmo su hardware reale: solo la QPU risponde alla domanda. Prima di spendere quota il circuito viene validato sul simulatore (il gate di NOX).",
+  "simulator_gate": {
+    "iterations": 2,
+    "top_outcome": "101",
+    "top_share": 0.938
+  },
+  "executed": null,
+  "outcome": "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale",
+  "total_wall_ms": 1044.8
+}

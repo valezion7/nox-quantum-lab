@@ -1,0 +1,7 @@
+{
+  "job_id": "d99mukif47jc73a9a0k0",
+  "backend": "ibm_fez",
+  "n_qubits": 8,
+  "shots": 4096,
+  "submitted_at": "2026-07-12T10:41:22.314128+00:00"
+}
