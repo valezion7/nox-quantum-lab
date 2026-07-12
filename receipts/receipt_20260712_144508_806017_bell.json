@@ -1,0 +1,49 @@
+{
+  "router": "nox-router-v0.4",
+  "task": "bell",
+  "params": {
+    "objective": "certify",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T12:45:01.262074+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": false,
+      "est": "n/a",
+      "note": "nessun sistema classico locale produce S > 2: non c'e' niente da eseguire"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": false,
+      "est": "4 circuiti su Aer, ~secondi",
+      "note": "riproduce le statistiche quantistiche ma gira su un computer classico: non certifica nulla sulla natura"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "4 circuiti, ~5-8 s di quota + coda",
+      "note": "l'unico backend che risponde alla domanda fisica"
+    }
+  ],
+  "chosen": "qpu",
+  "reason": "l'obiettivo e' certificare la violazione su hardware: per definizione serve un dispositivo quantistico reale.",
+  "qpu_queue": [
+    {
+      "backend": "ibm_kingston",
+      "pending_jobs": 0
+    },
+    {
+      "backend": "ibm_fez",
+      "pending_jobs": 3
+    },
+    {
+      "backend": "ibm_marrakesh",
+      "pending_jobs": 17
+    }
+  ],
+  "qpu_queue_note": "job in coda per backend al momento della decisione; il tempo di attesa dipende dalla durata dei job davanti (osservato: da minuti a una notte)",
+  "executed": null,
+  "outcome": "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale",
+  "total_wall_ms": 7543.1
+}

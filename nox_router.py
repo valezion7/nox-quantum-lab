@@ -130,6 +130,43 @@ def submit_qpu(circuits, shots=2048):
             "note": "in coda; recupera i risultati con retrieve_job.py"}
 
 
+def qpu_queue() -> list:
+    """Code attuali sulle QPU pubbliche. Chiamata di sola lettura: zero quota.
+
+    Il numero di job in coda non si traduce in un tempo preciso (dipende da
+    quanto durano i job davanti), quindi il router riporta i conteggi cosi'
+    come sono e lascia la stima qualitativa allo scontrino. Per esperienza
+    diretta: le nostre misure hanno aspettato da qualche minuto a una notte.
+    """
+    try:
+        from qiskit_ibm_runtime import QiskitRuntimeService
+        service = QiskitRuntimeService()
+        out = []
+        for b in service.backends(simulator=False, operational=True):
+            st = b.status()
+            out.append({"backend": b.name, "pending_jobs": st.pending_jobs})
+        return sorted(out, key=lambda x: x["pending_jobs"])
+    except Exception as e:
+        return [{"error": str(e)[:200]}]
+
+
+def attach_queue(receipt) -> None:
+    """Arricchisce lo scontrino con le code reali quando la scelta e' la QPU."""
+    q = qpu_queue()
+    receipt["qpu_queue"] = q
+    receipt["qpu_queue_note"] = ("job in coda per backend al momento della "
+                                 "decisione; il tempo di attesa dipende dalla "
+                                 "durata dei job davanti (osservato: da minuti "
+                                 "a una notte)")
+    ok = [x for x in q if "pending_jobs" in x]
+    if ok:
+        least = ok[0]
+        print("Code QPU adesso: " + ", ".join(f"{x['backend']}={x['pending_jobs']}" for x in ok)
+              + f" | la meno carica e' {least['backend']}")
+    else:
+        print("Code QPU non disponibili: " + str(q[0].get("error", "?")))
+
+
 # ---------------------------------------------------------------- i tre task
 
 def task_search(args, receipt):
@@ -184,6 +221,7 @@ def task_search(args, receipt):
         print(f"GATE FALLITO: il simulatore da' {top}, atteso {target}. Non spendo quota.")
         return
     print(f"GATE OK: simulatore conferma {top} ({counts[top]/2048:.1%} degli shot)")
+    attach_queue(receipt)
     if not args.allow_qpu:
         receipt["executed"] = None
         receipt["outcome"] = "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale"
@@ -223,6 +261,7 @@ def task_bell(args, receipt):
     receipt["chosen"] = "qpu"
     receipt["reason"] = ("l'obiettivo e' certificare la violazione su hardware: "
                          "per definizione serve un dispositivo quantistico reale.")
+    attach_queue(receipt)
     if not args.allow_qpu:
         receipt["executed"] = None
         receipt["outcome"] = "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale"
@@ -266,6 +305,7 @@ def task_qrng(args, receipt):
                          "solo la misura di qubit reali la fornisce (vedi "
                          "qrng_submit.py / qrng_fetch.py per il flusso completo "
                          "con estrattore di von Neumann).")
+    attach_queue(receipt)
     if not args.allow_qpu:
         receipt["executed"] = None
         receipt["outcome"] = "deciso ma non eseguito: rilancia con --allow-qpu per usare quota reale"
@@ -518,7 +558,7 @@ def main():
 
     args = p.parse_args()
 
-    receipt = {"router": "nox-router-v0.3", "task": args.task,
+    receipt = {"router": "nox-router-v0.4", "task": args.task,
                "params": {k: v for k, v in vars(args).items() if k not in ("task", "prompt")},
                "started": datetime.now(timezone.utc).isoformat()}
     if args.task == "llm":

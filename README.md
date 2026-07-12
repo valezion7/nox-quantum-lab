@@ -120,6 +120,8 @@ Cloud execution uses the official `anthropic` SDK (an optional dependency: `pip 
 
 Since v0.3 the receipts are also the router's memory. Before estimating, it re-reads `receipts/` and corrects its a-priori guesses with observed medians: the real tokens-per-second of each local model, the real dollar cost of past cloud calls. The more it runs, the better it estimates, and everything it has learned is inspectable in the `experience` block of every receipt. No database, no magic: just its own paper trail.
 
+Since v0.4 the router is also queue-aware: whenever the decision lands on the QPU, it checks the live queues of all public backends first (a read-only call, zero quota) and puts the pending-job counts on the receipt. It does not fake a precise wait time, because none exists: the receipt reports the counts and the honest observation that our own jobs have waited anywhere from minutes to a whole night.
+
 Every invocation writes a JSON receipt to `receipts/`: the candidates it considered, the estimated costs, the choice, the reason, and what was actually executed. Paid resources are never touched without an explicit flag: `--allow-qpu` for IBM Quantum quota, `--allow-cloud` for paid APIs. Example receipts from real runs are included.
 
 ## Honest limitations

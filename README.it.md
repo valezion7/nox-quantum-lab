@@ -120,6 +120,8 @@ L'esecuzione cloud usa l'SDK ufficiale `anthropic` (dipendenza opzionale: `pip i
 
 Dalla v0.3 gli scontrini sono anche la memoria del router. Prima di stimare, rilegge `receipts/` e corregge le ipotesi a priori con le mediane osservate: i token al secondo reali di ogni modello locale, il costo in dollari reale delle chiamate cloud passate. Più gira, meglio stima, e tutto ciò che ha imparato è ispezionabile nel blocco `experience` di ogni scontrino. Niente database, niente magia: solo la sua stessa carta straccia.
 
+Dalla v0.4 il router guarda anche le code: ogni volta che la decisione cade sulla QPU, controlla prima le code reali di tutti i backend pubblici (chiamata di sola lettura, zero quota) e mette i conteggi dei job in attesa sullo scontrino. Non inventa un tempo di attesa preciso, perché non esiste: lo scontrino riporta i conteggi e l'osservazione onesta che i nostri job hanno aspettato da pochi minuti a una notte intera.
+
 Ogni invocazione scrive uno scontrino JSON in `receipts/`: i candidati considerati, le stime di costo, la scelta, il motivo e cosa è stato eseguito davvero. Le risorse a pagamento non vengono mai toccate senza un flag esplicito: `--allow-qpu` per la quota IBM Quantum, `--allow-cloud` per le API a pagamento. Nel repository ci sono scontrini di esempio da esecuzioni reali.
 
 ## Limiti, detti chiaramente
