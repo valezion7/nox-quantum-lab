@@ -1,0 +1,40 @@
+{
+  "router": "nox-router-v0.3",
+  "task": "search",
+  "params": {
+    "space": 8,
+    "target": "101",
+    "objective": "answer",
+    "allow_qpu": false
+  },
+  "started": "2026-07-12T12:36:01.715059+00:00",
+  "candidates": [
+    {
+      "backend": "classical",
+      "can_answer": true,
+      "est": "8 confronti, microsecondi, costo zero",
+      "note": "per qualunque spazio enumerabile in memoria e' imbattibile"
+    },
+    {
+      "backend": "simulator",
+      "can_answer": true,
+      "est": "Grover a 3 qubit su Aer, ~secondi",
+      "note": "utile solo per validare il circuito, non per la risposta"
+    },
+    {
+      "backend": "qpu",
+      "can_answer": true,
+      "est": "Grover a 3 qubit, ~secondi di quota + coda",
+      "note": "dimostra l'algoritmo su hardware; nessun vantaggio di velocita' a questa scala"
+    }
+  ],
+  "chosen": "classical",
+  "reason": "l'obiettivo e' la risposta: la ricerca esaustiva classica la da' con certezza in una frazione di millisecondo. Usare la QPU qui sarebbe marketing.",
+  "executed": {
+    "backend": "classical",
+    "found": "101",
+    "wall_ms": 0.0023,
+    "certainty": 1.0
+  },
+  "total_wall_ms": 0.0
+}

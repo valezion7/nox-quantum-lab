@@ -1,0 +1,58 @@
+{
+  "router": "nox-router-v0.3",
+  "task": "llm",
+  "params": {
+    "objective": "draft",
+    "max_out": 15,
+    "allow_cloud": false
+  },
+  "started": "2026-07-12T12:36:20.896754+00:00",
+  "prompt_chars": 22,
+  "experience": {
+    "receipts_read": 11,
+    "local": {
+      "qwen3.6:35b": {
+        "runs": 4,
+        "median_tokens_per_s": 3.6
+      }
+    },
+    "cloud": {}
+  },
+  "candidates": [
+    {
+      "backend": "local:qwen3.6:35b",
+      "can_answer": true,
+      "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita'); osservato su 4 run: ~4 tok/s mediani, quindi ~4s stimati per questa richiesta",
+      "note": "il prompt non lascia mai questa macchina"
+    },
+    {
+      "backend": "cloud:claude-opus-4-8",
+      "can_answer": true,
+      "est": "~$0.0004 stimati (5 tok in + 15 tok out, listino 2026-06)",
+      "note": "tier top; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-sonnet-5",
+      "can_answer": true,
+      "est": "~$0.0002 stimati (5 tok in + 15 tok out, listino 2026-06)",
+      "note": "tier mid; il prompt viene inviato a anthropic"
+    },
+    {
+      "backend": "cloud:claude-haiku-4-5",
+      "can_answer": true,
+      "est": "~$0.0001 stimati (5 tok in + 15 tok out, listino 2026-06)",
+      "note": "tier small; il prompt viene inviato a anthropic"
+    }
+  ],
+  "token_estimate_note": "stima grezza ~4 char/token, serve solo a ordinare i costi tra candidati; dove ci sono run passate, le stime osservate le correggono",
+  "chosen": "local:qwen3.6:35b",
+  "reason": "per una bozza il modello locale basta e il costo marginale e' ~0: il cloud qui sarebbe spesa inutile.",
+  "executed": {
+    "backend": "local:qwen3.6:35b",
+    "output_tokens": 3,
+    "wall_s": 2.47,
+    "tokens_per_s": 1.2,
+    "preview": "pronto"
+  },
+  "total_wall_ms": 4524.8
+}
