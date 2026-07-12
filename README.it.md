@@ -118,6 +118,8 @@ python nox_router.py llm "testo riservato ..." --objective private
 
 L'esecuzione cloud usa l'SDK ufficiale `anthropic` (dipendenza opzionale: `pip install anthropic`, con `ANTHROPIC_API_KEY` nell'ambiente) e riporta sullo scontrino i conteggi token e il costo reali dalla risposta dell'API, non solo la stima. Le stime token per la fase di decisione usano un'euristica volutamente grezza (~4 caratteri per token), dichiarata come tale sullo scontrino.
 
+Dalla v0.3 gli scontrini sono anche la memoria del router. Prima di stimare, rilegge `receipts/` e corregge le ipotesi a priori con le mediane osservate: i token al secondo reali di ogni modello locale, il costo in dollari reale delle chiamate cloud passate. Più gira, meglio stima, e tutto ciò che ha imparato è ispezionabile nel blocco `experience` di ogni scontrino. Niente database, niente magia: solo la sua stessa carta straccia.
+
 Ogni invocazione scrive uno scontrino JSON in `receipts/`: i candidati considerati, le stime di costo, la scelta, il motivo e cosa è stato eseguito davvero. Le risorse a pagamento non vengono mai toccate senza un flag esplicito: `--allow-qpu` per la quota IBM Quantum, `--allow-cloud` per le API a pagamento. Nel repository ci sono scontrini di esempio da esecuzioni reali.
 
 ## Limiti, detti chiaramente

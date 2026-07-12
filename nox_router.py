@@ -282,6 +282,47 @@ def task_qrng(args, receipt):
     print(f"QPU: job {receipt['executed']['job_id']} su {receipt['executed']['backend']}")
 
 
+# ---------------------------------------------------------------- esperienza
+# Gli scontrini non sono solo trasparenza: sono la memoria del router.
+# Prima di stimare, rilegge le esecuzioni passate e usa i numeri osservati
+# (token al secondo reali, costi reali) al posto delle ipotesi a priori.
+
+def _median(xs: list) -> float:
+    s = sorted(xs)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+
+
+def load_experience() -> dict:
+    exp = {"receipts_read": 0, "local": {}, "cloud": {}}
+    if not RECEIPTS.exists():
+        return exp
+    for f in sorted(RECEIPTS.glob("receipt_*.json")):
+        try:
+            r = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        exp["receipts_read"] += 1
+        ex = r.get("executed") or {}
+        backend = ex.get("backend", "")
+        if backend.startswith("local:") and ex.get("tokens_per_s"):
+            exp["local"].setdefault(backend[6:], []).append(ex["tokens_per_s"])
+        elif backend.startswith("cloud:") and ex.get("cost_usd") is not None:
+            exp["cloud"].setdefault(backend[6:], []).append(ex["cost_usd"])
+    return exp
+
+
+def experience_summary(exp: dict) -> dict:
+    out = {"receipts_read": exp["receipts_read"], "local": {}, "cloud": {}}
+    for model, speeds in exp["local"].items():
+        out["local"][model] = {"runs": len(speeds),
+                               "median_tokens_per_s": round(_median(speeds), 1)}
+    for model, costs in exp["cloud"].items():
+        out["cloud"][model] = {"runs": len(costs),
+                               "median_cost_usd": round(_median(costs), 5)}
+    return out
+
+
 # ---------------------------------------------------------------- llm
 
 def ollama_models(timeout: float = 3.0) -> list:
@@ -330,12 +371,20 @@ def task_llm(args, receipt):
     tok_out = args.max_out
     local = ollama_models()
     local_pick = next((m for m in CONFIG["local_preference"] if m in local), None)
+    exp = load_experience()
+    receipt["experience"] = experience_summary(exp)
 
     candidates = []
     if local_pick:
+        est = "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')"
+        speeds = exp["local"].get(local_pick, [])
+        if speeds:
+            med = _median(speeds)
+            est += (f"; osservato su {len(speeds)} run: ~{med:.0f} tok/s mediani, "
+                    f"quindi ~{tok_out / med:.0f}s stimati per questa richiesta")
         candidates.append({
             "backend": f"local:{local_pick}", "can_answer": True,
-            "est": "costo marginale ~0 (hardware locale gia' ammortizzato, resta l'elettricita')",
+            "est": est,
             "note": "il prompt non lascia mai questa macchina",
         })
     else:
@@ -345,15 +394,24 @@ def task_llm(args, receipt):
         })
     for m in CONFIG["cloud_models"]:
         cost = tok_in / 1e6 * m["price_in_usd_mtok"] + tok_out / 1e6 * m["price_out_usd_mtok"]
+        est = (f"~${cost:.4f} stimati ({tok_in} tok in + {tok_out} tok out, "
+               f"listino {CONFIG['pricing_date']})")
+        costs = exp["cloud"].get(m["name"], [])
+        if costs:
+            est += f"; osservato su {len(costs)} run: ~${_median(costs):.4f} mediani"
         candidates.append({
             "backend": f"cloud:{m['name']}", "can_answer": True,
-            "est": f"~${cost:.4f} stimati ({tok_in} tok in + {tok_out} tok out, "
-                   f"listino {CONFIG['pricing_date']})",
+            "est": est,
             "note": f"tier {m['tier']}; il prompt viene inviato a {m['provider']}",
         })
     receipt["candidates"] = candidates
     receipt["token_estimate_note"] = ("stima grezza ~4 char/token, serve solo a "
-                                      "ordinare i costi tra candidati")
+                                      "ordinare i costi tra candidati; dove ci sono "
+                                      "run passate, le stime osservate le correggono")
+    if exp["receipts_read"]:
+        print(f"Esperienza: {exp['receipts_read']} scontrini riletti"
+              + (f", {sum(len(v) for v in exp['local'].values())} run locali misurate"
+                 if exp["local"] else ""))
 
     if args.objective == "private":
         if not local_pick:
@@ -460,7 +518,7 @@ def main():
 
     args = p.parse_args()
 
-    receipt = {"router": "nox-router-v0.2", "task": args.task,
+    receipt = {"router": "nox-router-v0.3", "task": args.task,
                "params": {k: v for k, v in vars(args).items() if k not in ("task", "prompt")},
                "started": datetime.now(timezone.utc).isoformat()}
     if args.task == "llm":

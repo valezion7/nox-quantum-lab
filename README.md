@@ -118,6 +118,8 @@ python nox_router.py llm "confidential text ..." --objective private
 
 Cloud execution uses the official `anthropic` SDK (an optional dependency: `pip install anthropic`, with `ANTHROPIC_API_KEY` in the environment) and reports the real token counts and cost from the API response, not just the estimate. Token estimates for the decision step use a deliberately crude ~4 chars/token heuristic, labeled as such on the receipt.
 
+Since v0.3 the receipts are also the router's memory. Before estimating, it re-reads `receipts/` and corrects its a-priori guesses with observed medians: the real tokens-per-second of each local model, the real dollar cost of past cloud calls. The more it runs, the better it estimates, and everything it has learned is inspectable in the `experience` block of every receipt. No database, no magic: just its own paper trail.
+
 Every invocation writes a JSON receipt to `receipts/`: the candidates it considered, the estimated costs, the choice, the reason, and what was actually executed. Paid resources are never touched without an explicit flag: `--allow-qpu` for IBM Quantum quota, `--allow-cloud` for paid APIs. Example receipts from real runs are included.
 
 ## Honest limitations
